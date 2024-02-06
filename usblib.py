@@ -206,3 +206,6 @@ class usb_class:
           print(repr(e))
           return b""
     return res[:resplen]
+  
+  def flush(self):
+    return

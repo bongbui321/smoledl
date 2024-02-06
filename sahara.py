@@ -407,5 +407,22 @@ class sahara:
     data = pack("<III", cmd_t.SAHARA_SWITCH_MODE, 0xC, mode)
     self.cdc.write(data)
   
+  def cmd_reset(self):
+    self.cdc.write(pack("<II", cmd_t.SAHARA_RESET_REQ, 0x8))
+    try:
+      res = self.get_rsp()
+    except Exception as e:  # pylint: disable=broad-except
+      self.debug(str(e))
+      return False
+    if "cmd" in res:
+      if res["cmd"] == cmd_t.SAHARA_RESET_RSP:
+        return True
+      elif res["cmd"] == cmd_t.SAHARA_END_TRANSFER:
+        if "data" in res:
+          pkt=res["data"]
+          print("Error in cmd_reset")
+          #self.error(self.get_error_desc(pkt.image_tx_status))
+    return False
+  
 
 

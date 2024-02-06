@@ -1,5 +1,14 @@
 from io import BytesIO
 
+def getint(valuestr):
+  try:
+    return int(valuestr)
+  except:
+    try:
+      return int(valuestr, 16)
+    except:
+      return 0
+
 class structhelper_io:
   pos = 0
 
