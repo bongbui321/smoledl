@@ -1,10 +1,18 @@
+"""
+Procedure:
+
+PBL (sahara protocol)
+|
+|
+-----SBL - Loader (firehose protocol)
+"""
 import sys
 from docopt import docopt
 
 from usblib import usb_class
-from edlclient.Library.sahara import sahara
-from edlclient.Library.sahara_defs import cmd_t, sahara_mode_t
-from edlclient.Library.firehose_client import firehose_client
+from sahara import sahara
+from sahara_defs import cmd_t
+from firehose_client import firehose_client
 
 args = docopt(__doc__, version='3')
 
@@ -28,6 +36,7 @@ class main:
     self.sahara = None
     self.vid = None 
     self.pid = None
+    self.serial_number = None
     self.portconfig = [[0x05c6, 0x9008, -1]] # vendorId, productId, interface
   
   def doconnect(self):
@@ -76,8 +85,8 @@ class main:
           if sahara_info is not None:
             resp = self.sahara.connect()
             mode = resp["mode"]
-            if "data" in resp:
-              data = resp["data"]
+            #if "data" in resp:
+            #  data = resp["data"]
             if mode == "sahara":
               mode = self.sahara.upload_loader(version=version)
           else:
@@ -96,6 +105,9 @@ class main:
         print("Trying to connect to firehose loader...")
         if fh.connect(sahara):
           fh.handle_firehose(cmd, options)
+    else:
+      print("ERROR: Don't work with non-firehose protocol")
+      sys.exit(1)
   
 if __name__ == "__main__":
   base = main()
