@@ -17,7 +17,7 @@ class usb_class:
     self.maxsize = 512
     self.vid = None
     self.pid = None
-    #self.serial_number = self.serial_number
+    self.serial_number = serial_number
     #self.configuration = None
     self.device = None
     self.devclass = -1
@@ -42,9 +42,9 @@ class usb_class:
     if self.connected:
       self.close()
       self.connected = False
-    #self.device = None
-    #self.EP_OUT = None
-    #self.EP_IN = None
+    self.device = None
+    self.EP_OUT = None
+    self.EP_IN = None
     devices = usb.core.find(find_all=True, backend=self.backend)
     for d in devices:
       for usbid in self.portconfig:
@@ -56,6 +56,7 @@ class usb_class:
           self.vid = d.idVendor
           self.pid = d.idProduct
           self.serial_number = d.serial_number
+          #print(self.serial_number)
           self.interface = usbid[2]
           break
       if self.device is not None:
@@ -75,13 +76,17 @@ class usb_class:
         self.backend = usb.backend.libusb0.get_backend()
         self.device = usb.core.find(idVendor=self.vid, idProduct=self.pid, backend=self.backend)
     if self.configuration is None:
-      self.error("Couldn't get device configuration.")
+      print("Couldn't get device configuration.")
       return False
     if self.interface > self.configuration.bNumInterfaces:
       print("Invalid interface, max number is %d" % self.configuration.bNumInterfaces)
       return False
+    count = 0
     for itf in self.configuration:
+      print(count)
+      count += 1 
       if self.devclass == -1:
+        print("GET IN DEVCLass = -1")
         self.devclass = 0xFF
       if itf.bInterfaceClass == self.devclass:
         if self.interface == -1 or self.interface == itf.bInterfaceNumber:
@@ -91,10 +96,12 @@ class usb_class:
           for ep in itf:
             edir = usb.util.endpoint_direction(ep.bEndpointAddress)
             if (edir == usb.util.ENDPOINT_OUT and EP_OUT == -1) or ep.bEndpointAddress == (EP_OUT & 0xF):
+              print("++++++++++++GOES IN EP_OUT SET")
               self.EP_OUT = ep
             elif (edir == usb.util.ENDPOINT_IN and EP_IN == -1) or ep.bEndpointAddress == (EP_OUT & 0xF):
+              print("++++++++++++GOES IN EP_IN SET")
               self.EP_IN = ep
-            break
+          break
 
     if self.EP_OUT is not None and self.EP_IN is not None:
       self.maxsize = self.EP_IN.wMaxPacketSize
@@ -146,7 +153,7 @@ class usb_class:
           try:
             self.EP_OUT.write(b'')
           except Exception as err:
-            self.debug(str(err))
+            print(str(err))
             return False
         return True
     else:
@@ -155,10 +162,10 @@ class usb_class:
         try:
           ctr = self.EP_OUT.write(command[pos:pos + pktsize])
           if ctr <= 0:
-            self.info(ctr)
+            print(ctr)
           pos += pktsize
         except Exception as err:
-          self.debug(str(err))
+          print(str(err))
           i += 1
           if i == 3:
             return False

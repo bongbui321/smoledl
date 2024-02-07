@@ -21,16 +21,17 @@ import os
 import json
 import time
 
-
 class response:
   resp = False
   data = b""
   error = ""
   log = None
 
-  def __init__(self, resp=False, data=b""):
+  def __init__(self, resp=False, data=b"", error: str = "", log: dict = ""):
     self.resp = resp
     self.data = data
+    self.error = error
+    self.log = log
 
 class firehose:
   class cfg:
@@ -52,22 +53,22 @@ class firehose:
     prod_name = "Unknown"
     maxlun = 99
 
-  def __init__(self, cdc, xml, cfg, devicemodel, serial, luns, args):
+  def __init__(self, cdc, xml, cfg, serial, luns):
     self.cdc = cdc
     #self.lasterror = b""
     #self.loglevel = loglevel
     #self.args = args
-    #self.xml = xml
-    #self.cfg = cfg
+    self.xml = xml
+    self.cfg = cfg
     #self.prog = 0
     #self.progtime = 0
     #self.progpos = 0
     #self.pk = None
     #self.modules = None
-    #self.serial = serial
+    self.serial = serial
     #self.devicemodel = devicemodel
     #self.skipresponse = skipresponse
-    #self.luns = luns
+    self.luns = luns
     self.supported_functions = []
     #self.lunsizes = {}
 
@@ -94,7 +95,7 @@ class firehose:
     if len(info) > 0:
       supfunc = False
       for line in info:
-        self.info(line)
+        print(line)
         if "chip serial num" in line.lower():
           try:
             serial = line.split("0x")[1][:-1]
@@ -102,7 +103,7 @@ class firehose:
                 serial=serial[:serial.rfind(")")]
             self.serial = int(serial, 16)
           except Exception as err:  # pylint: disable=broad-except
-            self.debug(str(err))
+            print(str(err))
             serial = line.split(": ")[2]
             self.serial = int(serial.split(" ")[0])
         if supfunc and "end of supported functions" not in line.lower():
@@ -181,6 +182,7 @@ class firehose:
                   f"SkipStorageInit=\"{str(int(self.cfg.SkipStorageInit))}\" " + \
                   f"SkipWrite=\"{str(int(self.cfg.SkipWrite))}\"/>" + \
                   "</data>"
+    print(connectcmd)
     # TODO: add xmlsend()
     rsp = self.xmlsend(connectcmd)
     #if not rsp.resp:
@@ -310,9 +312,9 @@ class firehose:
       print(f"TargetName={self.cfg.TargetName}")
       print(f"MemoryName={self.cfg.MemoryName}")
       print(f"Version={self.cfg.Version}")
-      print("Trying to read first storage sector...")
-      rsp = self.cmd_read_buffer(0, 1, 1, False)
-      print("Running configure...")
+      #print("Trying to read first storage sector...")
+      #rsp = self.cmd_read_buffer(0, 1, 1, False)
+      #print("Running configure...")
       #if not rsp.resp and self.args["--memory"] is None:
       #  for line in rsp.error:
       #    if "Failed to set the IO options" in line:
@@ -348,7 +350,8 @@ class firehose:
     #                            loglevel=self.loglevel)
     #    if self.nothing is not None:
     #      self.nothing.ntprojectverify()
-    self.luns = self.getluns(self.args)
+    #self.luns = self.getluns(self.args)
+    self.luns = self.getluns()
     return True
 
   def cmd_read_buffer(self):
@@ -400,9 +403,9 @@ class firehose:
               except Exception as err:  # pylint: disable=broad-except
                 self.debug(str(err))
                 continue
-              self.info("Storage report:")
+              print("Storage report:")
               for sii in si:
-                self.info(f"{sii}:{si[sii]}")
+                print(f"{sii}:{si[sii]}")
               if "total_blocks" in si:
                 self.cfg.total_blocks = si["total_blocks"]
               if "num_physical" in si:
@@ -435,7 +438,7 @@ class firehose:
   def get_storageinfo(self):
     pass
 
-  def getluns(self, argument):
+  def getluns(self, argument=None):
     #if argument["--lun"] is not None:
     #  return [int(argument["--lun"])]
     luns = []
@@ -474,8 +477,10 @@ class firehose:
     self.cdc.flush()
     self.cdc.xmlread = True
     if isinstance(data, bytes) or isinstance(data, bytearray):
+      print("++++++IN XML INSTANCE")
       self.cdc.write(data[:self.cfg.MaxXMLSizeInBytes])
     else:
+      print("++++++IN XML NOT INSTANCE")
       self.cdc.write(bytes(data, 'utf-8')[:self.cfg.MaxXMLSizeInBytes])
     rdata = bytearray()
     counter = 0
@@ -483,6 +488,7 @@ class firehose:
     if not skipresponse:
       while b"<response value" not in rdata:
         try:
+          print("GET IN FIRST TRY")
           tmp = self.cdc.read(timeout=None)
           if tmp == b"" in rdata:
             counter += 1
@@ -495,11 +501,14 @@ class firehose:
           return response(resp=False, error=str(err))
       try:
         if b"raw hex token" in rdata:
+          print("RAW HEX TOKEN")
           rdata = rdata
         try:
+          print("getReponse")
           resp = self.xml.getresponse(rdata)
           status = self.getstatus(resp)
           if "rawmode" in resp:
+            print("RAWMODE")
             if resp["rawmode"] == "false":
               if status:
                 log = self.xml.getlog(rdata)
@@ -516,14 +525,14 @@ class firehose:
         except Exception as e:  # pylint: disable=broad-except
           rdata = bytes(self.decoder(rdata), 'utf-8')
           resp = self.xml.getresponse(rdata)
-        status = self.getstatus(resp)
-        if status:
-          return response(resp=True, data=resp)
-        else:
-          error = ""
-          if b"<log value" in rdata:
-            error = self.xml.getlog(rdata)
-          return response(resp=False, error=error, data=resp)
+        #status = self.getstatus(resp)
+        #if status:
+        #  return response(resp=True, data=resp)
+        #else:
+        #  error = ""
+        #  if b"<log value" in rdata:
+        #    error = self.xml.getlog(rdata)
+        #  return response(resp=False, error=error, data=resp)
       except Exception as err:
         print(str(err))
         #if isinstance(rdata, bytes) or isinstance(rdata, bytearray):

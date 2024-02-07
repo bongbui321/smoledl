@@ -14,9 +14,13 @@ class structhelper_io:
 
   def __init__(self, data:BytesIO = None, direction='little'):
     self.data = data
-    self.diretion = direction
+    self.direction = direction
   
   def dword(self):
     dat = int.from_bytes(self.data.read(4), self.direction)
+    return dat
+  
+  def qword(self):
+    dat = int.from_bytes(self.data.read(8), self.direction)
     return dat
 

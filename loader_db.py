@@ -1,5 +1,6 @@
 import sys
 import os
+import inspect
 
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(current_dir)
@@ -7,7 +8,7 @@ sys.path.insert(0, parent_dir)
 
 try:
     #from edlclient.Library.utils import read_object, print_progress, rmrf, LogBase
-    from qualcomm_config import sochw, msmids, root_cert_hash
+    from qualcomm_config import sochw, msmids #, root_cert_hash
 except:
     #from Library.utils import read_object, print_progress, rmrf, LogBase
     from qualcomm_config import sochw, msmids, root_cert_hash
@@ -17,7 +18,7 @@ class loader_utils:
     self.loaderdb = {}
   
   def init_loader_db(self):
-    for (dirpath, dirnames, filenames) in os.walk(os.path.join(parent_dir, "Loaders")):
+    for (dirpath, dirnames, filenames) in os.walk(os.path.join(current_dir, "Loaders")):
       for filename in filenames:
         fn = os.path.join(dirpath, filename)
         found = False
@@ -50,7 +51,7 @@ class loader_utils:
         except Exception as e:  # pylint: disable=broad-except
           self.debug(f"Filename:{filename} => {str(e)}")
           continue
-      return self.loaderdb
+    return self.loaderdb
 
   def convertmsmid(self, msmid):
     msmiddb = []

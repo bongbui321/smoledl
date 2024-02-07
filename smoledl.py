@@ -1,11 +1,3 @@
-"""
-Procedure:
-
-PBL (sahara protocol)
-|
-|
------SBL - Loader (firehose protocol)
-"""
 import sys
 from docopt import docopt
 
@@ -14,12 +6,31 @@ from sahara import sahara
 from sahara_defs import cmd_t
 from firehose_client import firehose_client
 
-args = docopt(__doc__, version='3')
+#default_ids = [
+#  [0x05c6, 0x9008, -1],
+#  [0x0fce, 0x9dde, -1],
+#  [0x0fce, 0xade5, -1],
+#  [0x05c6, 0x900e, -1],
+#  [0x05c6, 0x9025, -1],
+#  [0x1199, 0x9062, -1],
+#  [0x1199, 0x9070, -1],
+#  [0x1199, 0x9090, -1],
+#  [0x0846, 0x68e0, -1],
+#  [0x19d2, 0x0076, -1]
+#]
+
+if len(sys.argv) > 1:
+  args = {sys.argv[1] : True}
+  print(args)
+else:
+  print("GIVE COMMAND")
+  sys.exit(1)
+
 
 def parse_cmd(rargs):
   cmds = ["w", "e", "setactiveslot", "reset"]
   for cmd in cmds:
-    if rargs[cmd]:
+    if cmd in rargs:
       return cmd
   return ""
 
@@ -38,6 +49,7 @@ class main:
     self.pid = None
     self.serial_number = None
     self.portconfig = [[0x05c6, 0x9008, -1]] # vendorId, productId, interface
+    #self.portconfig = default_ids
   
   def doconnect(self):
     while not self.cdc.connected:
@@ -61,7 +73,6 @@ class main:
 
   def run(self):
     mode = ""
-    loop = 0
 
     self.cdc = usb_class(portconfig=self.portconfig)
     self.sahara = sahara(self.cdc)
@@ -69,7 +80,7 @@ class main:
 
     resp = None
     self.cdc.timeout = 1500
-    conninfo = self.doconnect(loop)
+    conninfo = self.doconnect()
     mode = conninfo["mode"]
 
     if not "data" in conninfo:

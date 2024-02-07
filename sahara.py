@@ -32,8 +32,7 @@ import time
 
 from loader_db import loader_utils
 from qualcomm_config import sochw, msmids, root_cert_hash
-from sahara_defs import ErrorDesc, cmd_t, exec_cmd_t, sahara_mode_t, status_t, \
-    CommandHandler, SAHARA_VERSION
+from sahara_defs import cmd_t, exec_cmd_t, sahara_mode_t, status_t, CommandHandler
 
 class sahara:
   def __init__(self, cdc):
@@ -99,8 +98,10 @@ class sahara:
     return {"mode": "error"}
 
   def cmd_info(self, version):
+    print("******IN HERE IN COMMand INFO*******")
     if self.enter_command_mode(version=version):
       self.serial = self.cmdexec_get_serial_num()
+      print("SERIAL")
       self.serials = "{:08x}".format(self.serial)
       if version < 3:
         self.hwid = self.cmdexec_get_msm_hwid()
@@ -117,68 +118,68 @@ class sahara:
             cpustr = f"CPU detected:      \"{msmids[self.msm_id]}\"\n"
           else:
             cpustr = "Unknown CPU, please send log as issue to https://github.com/bkerler/edl\n"
-          self.info(f"\nVersion {hex(version)}\n------------------------\n" +
+          print(f"\nVersion {hex(version)}\n------------------------\n" +
                     f"HWID:              0x{self.hwidstr} (MSM_ID:0x{self.msm_str}," +
                     f"OEM_ID:0x{self.oem_str}," +
                     f"MODEL_ID:0x{self.model_id})\n" +
                     cpustr +
                     f"PK_HASH:           0x{self.pkhash}\n" +
                     f"Serial:            0x{self.serials}\n")
-          if self.programmer == "":
-            if self.hwidstr in self.loaderdb:
-              mt = self.loaderdb[self.hwidstr]
-              unfused = False
-              for rootcert in root_cert_hash:
-                if self.pkhash[0:16] in root_cert_hash[rootcert]:
-                  unfused = True
-                  break
-              if unfused:
-                self.info("Possibly unfused device detected, so any loader should be fine...")
-                if self.pkhash[0:16] in mt:
-                  self.programmer = mt[self.pkhash[0:16]]
-                  print(f"Trying loader: {self.programmer}")
-                else:
-                  for loader in mt:
-                    self.programmer = mt[loader]
-                    print(f"Possible loader available: {self.programmer}")
-                  for loader in mt:
-                    self.programmer = mt[loader]
-                    print(f"Trying loader: {self.programmer}")
-                    break
-              elif self.pkhash[0:16] in mt:
-                self.programmer = self.loaderdb[self.hwidstr][self.pkhash[0:16]]
-                print(f"Detected loader: {self.programmer}")
+        if self.programmer == "":
+          if self.hwidstr in self.loaderdb:
+            mt = self.loaderdb[self.hwidstr]
+            unfused = False
+            for rootcert in root_cert_hash:
+              if self.pkhash[0:16] in root_cert_hash[rootcert]:
+                unfused = True
+                break
+            if unfused:
+              print("Possibly unfused device detected, so any loader should be fine...")
+              if self.pkhash[0:16] in mt:
+                self.programmer = mt[self.pkhash[0:16]]
+                print(f"Trying loader: {self.programmer}")
               else:
-                for loader in self.loaderdb[self.hwidstr]:
-                  self.programmer = self.loaderdb[self.hwidstr][loader]
+                for loader in mt:
+                  self.programmer = mt[loader]
+                  print(f"Possible loader available: {self.programmer}")
+                for loader in mt:
+                  self.programmer = mt[loader]
                   print(f"Trying loader: {self.programmer}")
                   break
-            elif self.hwidstr is not None and self.pkhash is not None:
-              msmid = self.hwidstr[:8]
-              found = False
-              for hwidstr in self.loaderdb:
-                if msmid == hwidstr[:8]:
-                  if self.pkhash[0:16] in self.loaderdb[hwidstr]:
-                    self.programmer = self.loaderdb[hwidstr][self.pkhash[0:16]]
-                    print(f"Found loader: {self.programmer}")
-                    self.cmd_modeswitch(sahara_mode_t.SAHARA_MODE_COMMAND)
-                    return True
-                else:
-                  if self.pkhash[0:16] in self.loaderdb[hwidstr]:
-                    self.programmer = self.loaderdb[hwidstr][self.pkhash[0:16]]
-                    print(f"Found possible loader: {self.programmer}")
-                    found = True
-                if found:
+            elif self.pkhash[0:16] in mt:
+              self.programmer = self.loaderdb[self.hwidstr][self.pkhash[0:16]]
+              print(f"Detected loader: {self.programmer}")
+            else:
+              for loader in self.loaderdb[self.hwidstr]:
+                self.programmer = self.loaderdb[self.hwidstr][loader]
+                print(f"Trying loader: {self.programmer}")
+                break
+          elif self.hwidstr is not None and self.pkhash is not None:
+            msmid = self.hwidstr[:8]
+            found = False
+            for hwidstr in self.loaderdb:
+              if msmid == hwidstr[:8]:
+                if self.pkhash[0:16] in self.loaderdb[hwidstr]:
+                  self.programmer = self.loaderdb[hwidstr][self.pkhash[0:16]]
+                  print(f"Found loader: {self.programmer}")
                   self.cmd_modeswitch(sahara_mode_t.SAHARA_MODE_COMMAND)
                   return True
-                else:
-                  print(
-                    f"Couldn't find a loader for given hwid and pkhash ({self.hwidstr}_{self.pkhash[0:16]}" +
-                    "_[FHPRG/ENPRG].bin) :(")
-                return False
+              else:
+                if self.pkhash[0:16] in self.loaderdb[hwidstr]:
+                  self.programmer = self.loaderdb[hwidstr][self.pkhash[0:16]]
+                  print(f"Found possible loader: {self.programmer}")
+                  found = True
+            if found:
+              self.cmd_modeswitch(sahara_mode_t.SAHARA_MODE_COMMAND)
+              return True
             else:
-              print(f"Couldn't find a suitable loader :(")
-              return False
+              print(
+                f"Couldn't find a loader for given hwid and pkhash ({self.hwidstr}_{self.pkhash[0:16]}" +
+                "_[FHPRG/ENPRG].bin) :(")
+            return False
+          else:
+            print(f"Couldn't find a suitable loader :(")
+            return False
       else:
         print(f"\nVersion {hex(version)}\n------------------------\n" +
                   f"Serial:            0x{self.serials}\n")
@@ -189,11 +190,9 @@ class sahara:
       return True
     return False
 
-  def cmd_reset(self):
-    pass
-
   # TODO: tailor for comma device
   def upload_loader(self, version):
+    print("+++UPLOAD_LOADER+++")
     if self.programmer == "":
       return ""
     try:
@@ -226,11 +225,11 @@ class sahara:
           if cmd == cmd_t.SAHARA_64BIT_MEMORY_READ_DATA:
             self.bit64 = True
             if loop == 0:
-              self.info("64-Bit mode detected.")
+              print("64-Bit mode detected.")
           elif cmd == cmd_t.SAHARA_READ_DATA:
             self.bit64 = False
             if loop == 0:
-              self.info("32-Bit mode detected.")
+              print("32-Bit mode detected.")
           pkt = resp["data"]
           self.id = pkt.image_id
           #if self.id == 0x7:
@@ -322,15 +321,15 @@ class sahara:
       elif pkt.cmd == cmd_t.SAHARA_64BIT_MEMORY_READ_DATA:
           self.bit64 = True
           return {"cmd": pkt.cmd, "data": self.ch.pkt_read_data_64(data)}
-      elif pkt.cmd == cmd_t.SAHARA_READ_DATA:
-          self.bit64 = False
-          return {"cmd": pkt.cmd, "data": self.ch.pkt_read_data(data)}
-      elif pkt.cmd == cmd_t.SAHARA_64BIT_MEMORY_DEBUG:
-          self.bit64 = True
-          return {"cmd": pkt.cmd, "data": self.ch.pkt_memory_debug_64(data)}
-      elif pkt.cmd == cmd_t.SAHARA_MEMORY_DEBUG:
-          self.bit64 = False
-          return {"cmd": pkt.cmd, "data": self.ch.pkt_memory_debug(data)}
+      #elif pkt.cmd == cmd_t.SAHARA_READ_DATA:
+      #    self.bit64 = False
+      #    return {"cmd": pkt.cmd, "data": self.ch.pkt_read_data(data)}
+      #elif pkt.cmd == cmd_t.SAHARA_64BIT_MEMORY_DEBUG:
+      #    self.bit64 = True
+      #    return {"cmd": pkt.cmd, "data": self.ch.pkt_memory_debug_64(data)}
+      #elif pkt.cmd == cmd_t.SAHARA_MEMORY_DEBUG:
+      #    self.bit64 = False
+      #    return {"cmd": pkt.cmd, "data": self.ch.pkt_memory_debug(data)}
       elif pkt.cmd == cmd_t.SAHARA_EXECUTE_RSP:
           return {"cmd": pkt.cmd, "data": self.ch.pkt_execute_rsp_cmd(data)}
       elif pkt.cmd == cmd_t.SAHARA_CMD_READY or pkt.cmd == cmd_t.SAHARA_RESET_RSP:

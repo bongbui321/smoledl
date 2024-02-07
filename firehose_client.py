@@ -36,28 +36,27 @@ class firehose_client:
     self.arguments = arguments
 
     self.cfg = firehose.cfg()
-    if not arguments["--memory"] is None:
-        self.cfg.MemoryName = arguments["--memory"].lower()
-    else:
-        self.cfg.MemoryName = ""
+    #if not arguments["--memory"] is None:
+    #    self.cfg.MemoryName = arguments["--memory"].lower()
+    self.cfg.MemoryName = "UFS"
     self.cfg.ZLPAwareHost = 1
-    self.cfg.SkipStorageInit = arguments["--skipstorageinit"]
-    self.cfg.SkipWrite = arguments["--skipwrite"]
-    self.cfg.MaxPayloadSizeToTargetInBytes = getint(arguments["--maxpayload"])
-    self.cfg.SECTOR_SIZE_IN_BYTES = getint(arguments["--sectorsize"])
+    #self.cfg.SkipStorageInit = arguments["--skipstorageinit"]
+    #self.cfg.SkipStorageInit = 
+    #self.cfg.SkipWrite = arguments["--skipwrite"]
+    #self.cfg.MaxPayloadSizeToTargetInBytes = getint(arguments["--maxpayload"])
+    #self.cfg.SECTOR_SIZE_IN_BYTES = getint(arguments["--sectorsize"])
     self.cfg.bit64 = sahara.bit64
     devicemodel = ""
     skipresponse = False
-    if "--skipresponse" in arguments:
-        if arguments["--skipresponse"]:
-            skipresponse = True
-    if "--devicemodel" in arguments:
-        if arguments["--devicemodel"] is not None:
-            devicemodel = arguments["--devicemodel"]
+    #if "--skipresponse" in arguments:
+    #    if arguments["--skipresponse"]:
+    #        skipresponse = True
+    #if "--devicemodel" in arguments:
+    #    if arguments["--devicemodel"] is not None:
+    #        devicemodel = arguments["--devicemodel"]
     self.cfg.programmer = self.sahara.programmer
     self.firehose = firehose(cdc=cdc, xml=xmlparser(), cfg=self.cfg,
-                              devicemodel=devicemodel, serial=sahara.serial, skipresponse=skipresponse,
-                              luns=self.getluns(arguments), args=arguments)
+                              serial=sahara.serial, luns=self.getluns())
     self.connected = False
 
   def connect(self, sahara):
@@ -85,6 +84,7 @@ class firehose_client:
       #                      "--memory\" with \"UFS\",\"NAND\" or \"spinor\" instead !")
       #      elif socid in sochw:
       #          self.target_name = sochw[socid].split(",")[0]
+
     # We assume ufs is fine (hopefully), set it as default
     if self.cfg.MemoryName == "":
         if "ufs" in self.firehose.supported_functions:
@@ -105,19 +105,19 @@ class firehose_client:
       print(funcs)
       self.target_name = self.firehose.cfg.TargetName
       self.connected = True
-      try:
-          if self.firehose.modules is None:
-            self.firehose.modules = modules(fh=self.firehose, serial=self.firehose.serial,
-                                            supported_functions=self.firehose.supported_functions,
-                                            loglevel=self.__logger.level,
-                                            devicemodel=self.firehose.devicemodel, args=self.arguments)
-      except Exception as err:  # pylint: disable=broad-except
-          self.firehose.modules = None
+      #try:
+      #    if self.firehose.modules is None:
+      #      self.firehose.modules = modules(fh=self.firehose, serial=self.firehose.serial,
+      #                                      supported_functions=self.firehose.supported_functions,
+      #                                      loglevel=self.__logger.level,
+      #                                      devicemodel=self.firehose.devicemodel, args=self.arguments)
+      #except Exception as err:  # pylint: disable=broad-except
+      #    self.firehose.modules = None
     return self.connected
   
-  def getluns(self, argument):
-    if argument["--lun"] is not None:
-      return [int(argument["--lun"])]
+  def getluns(self):
+    #if argument["--lun"] is not None:
+    #  return [int(argument["--lun"])]
     luns = []
     if self.cfg.MemoryName.lower() == "ufs":
       for i in range(0, self.cfg.maxlun):
@@ -129,9 +129,9 @@ class firehose_client:
   def handle_firehose(self, cmd, options):
     if cmd == "reset":
       mode = "reset"
-      if not self.check_param(["--resetmode"]):
-        return False
-      return self.firehose.cmd_reset(options["--resetmode"])
+      #if not self.check_param(["--resetmode"]):
+      #  return False
+      return self.firehose.cmd_reset()
     else: 
-       print("Doesn't support right now")
-       sys.exit(1)
+      print("Doesn't support right now")
+      sys.exit(1)

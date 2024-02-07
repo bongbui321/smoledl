@@ -19,9 +19,9 @@ class cmd_t:
   #SAHARA_MEMORY_READ = 0xA
   SAHARA_CMD_READY = 0xB
   SAHARA_SWITCH_MODE = 0xC
-  #SAHARA_EXECUTE_REQ = 0xD
+  SAHARA_EXECUTE_REQ = 0xD
   SAHARA_EXECUTE_RSP = 0xE
-  #SAHARA_EXECUTE_DATA = 0xF
+  SAHARA_EXECUTE_DATA = 0xF
   #SAHARA_64BIT_MEMORY_DEBUG = 0x10
   #SAHARA_64BIT_MEMORY_READ = 0x11
   SAHARA_64BIT_MEMORY_READ_DATA = 0x12
@@ -144,3 +144,27 @@ class CommandHandler:
     return req
 
   # TODO: other pkt methods
+
+  def pkt_read_data_64(self, data):
+    if len(data)<0x8 + 0x3 * 0x8:
+      raise DataError
+    st = structhelper_io(BytesIO(data))
+    class req:
+      cmd = st.dword()
+      len = st.dword()
+      image_id = st.qword()
+      data_offset = st.qword()
+      data_len = st.qword()
+    return req
+  
+  def pkt_execute_rsp_cmd(self, data):
+    if len(data)<0x4 * 0x4:
+      raise DataError
+    st = structhelper_io(BytesIO(data))
+    class req:
+        cmd = st.dword()
+        len = st.dword()
+        client_cmd = st.dword()
+        data_len = st.dword()
+    return req
+  
