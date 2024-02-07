@@ -476,6 +476,7 @@ class firehose:
   def xmlsend(self, data, skipresponse=False) -> response:
     self.cdc.flush()
     self.cdc.xmlread = True
+    print(data)
     if isinstance(data, bytes) or isinstance(data, bytearray):
       print("++++++IN XML INSTANCE")
       self.cdc.write(data[:self.cfg.MaxXMLSizeInBytes])
@@ -486,6 +487,7 @@ class firehose:
     counter = 0
     timeout = 3
     if not skipresponse:
+      print("++++ GET IN NO RESPONSE")
       while b"<response value" not in rdata:
         try:
           print("GET IN FIRST TRY")
@@ -525,14 +527,14 @@ class firehose:
         except Exception as e:  # pylint: disable=broad-except
           rdata = bytes(self.decoder(rdata), 'utf-8')
           resp = self.xml.getresponse(rdata)
-        #status = self.getstatus(resp)
-        #if status:
-        #  return response(resp=True, data=resp)
-        #else:
-        #  error = ""
-        #  if b"<log value" in rdata:
-        #    error = self.xml.getlog(rdata)
-        #  return response(resp=False, error=error, data=resp)
+        status = self.getstatus(resp)
+        if status:
+          return response(resp=True, data=resp)
+        else:
+          error = ""
+          if b"<log value" in rdata:
+            error = self.xml.getlog(rdata)
+          return response(resp=False, error=error, data=resp)
       except Exception as err:
         print(str(err))
         #if isinstance(rdata, bytes) or isinstance(rdata, bytearray):
@@ -546,3 +548,15 @@ class firehose:
         return response(resp=False, error=rdata)
     else:
         return response(resp=True, data=rdata)
+  
+  def getstatus(self, resp):
+    if "value" in resp:
+      value = resp["value"]
+      if value == "ACK" or value == "true":
+        return True
+      else:
+        return False
+    return True
+  
+  def decoder(self, data):
+    pass
